@@ -14,9 +14,9 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 {
     public class DoNotGuardDictionaryRemoveByContainsKeyTests
     {
-        #region Reports Diagnostic
+        #region Tests
         [Fact]
-        public async Task RemoveIsTheOnlyStatement_ReportsDiagnostic_CS()
+        public async Task RemoveIsTheOnlyStatement_OffersFixer_CS()
         {
             string source = @"
 " + CSUsings + @"
@@ -52,7 +52,7 @@ namespace Testopolis
         }
 
         [Fact]
-        public async Task RemoveIsTheOnlyStatementInABlock_ReportsDiagnostic_CS()
+        public async Task RemoveIsTheOnlyStatementInABlock_OffersFixer_CS()
         {
             string source = @"
 " + CSUsings + @"
@@ -193,7 +193,7 @@ namespace Testopolis
 
         public MyClass()
         {
-            if (MyDictionary.ContainsKey(""Key""))
+            if ([|MyDictionary.ContainsKey(""Key"")|])
             {
                 MyDictionary.Remove(""Key"");
                 Console.WriteLine();
@@ -202,11 +202,27 @@ namespace Testopolis
     }
 }";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
+            string fixedSource = @"
+" + CSUsings + @"
+namespace Testopolis
+{
+    public class MyClass
+    {
+        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+
+        public MyClass()
+        {
+            if (MyDictionary.Remove(""Key""))
+            {
+                Console.WriteLine();
+            }
+        }
+    }
+}";
+
+            await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
 
-        [Fact]
-        public async Task RemoveIsTheOnlyStatement_ReportsDiagnostic_VB()
         {
             string source = @"
 " + VBUsings + @"
@@ -238,7 +254,7 @@ End Namespace";
         }
 
         [Fact]
-        public async Task AdditionalStatements_NoDiagnostic_VB()
+        public async Task AdditionalStatements_OffersFixer_VB()
         {
             string source = @"
 " + VBUsings + @"
@@ -255,7 +271,21 @@ Namespace Testopolis
     End Class
 End Namespace";
 
-            await VerifyVB.VerifyAnalyzerAsync(source);
+            string fixedSource = @"
+" + VBUsings + @"
+Namespace Testopolis
+    Public Class SomeClass
+        Public MyDictionary As New Dictionary(Of String, String)()
+
+        Public Sub New()
+            If MyDictionary.Remove(""Key"") Then
+                Console.WriteLine()
+            End If
+        End Sub
+    End Class
+End Namespace";
+
+            await VerifyVB.VerifyCodeFixAsync(source, fixedSource);
         }
         #endregion
 

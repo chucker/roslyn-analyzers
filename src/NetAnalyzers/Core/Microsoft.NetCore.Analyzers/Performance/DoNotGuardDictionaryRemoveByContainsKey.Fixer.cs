@@ -37,23 +37,35 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             var diagnostic = context.Diagnostics.FirstOrDefault();
 
-            if (TryParseLocationInfo(diagnostic, DoNotGuardDictionaryRemoveByContainsKey.ConditionalOperation, out var conditionalOperationSpan) &&
-                TryParseLocationInfo(diagnostic, DoNotGuardDictionaryRemoveByContainsKey.ChildStatementOperation, out var childStatementOperationSpan) &&
+            if (TryParseLocationInfo(diagnostic, DoNotGuardDictionaryRemoveByContainsKey.PropertyKeys.ConditionalOperation, out var conditionalOperationSpan) &&
+                TryParseLocationInfo(diagnostic, DoNotGuardDictionaryRemoveByContainsKey.PropertyKeys.ChildStatementOperation, out var childStatementOperationSpan) &&
+                diagnostic.Properties.TryGetValue(DoNotGuardDictionaryRemoveByContainsKey.PropertyKeys.HasMultipleStatements, out var _hasMultipleStatements) &&
+                bool.TryParse(_hasMultipleStatements, out var hasMultipleStatements) &&
                 root.FindNode(conditionalOperationSpan) is SyntaxNode conditionalOperationNode &&
                 root.FindNode(childStatementOperationSpan) is SyntaxNode childStatementOperationNode)
             {
                 context.RegisterCodeFix(new DoNotGuardDictionaryRemoveByContainsKeyCodeAction(_ =>
-                    Task.FromResult(ReplaceConditionWithChild(context.Document, root, conditionalOperationNode, childStatementOperationNode))),
+                    Task.FromResult(ReplaceConditionWithChild(context.Document, root, conditionalOperationNode, childStatementOperationNode, hasMultipleStatements))),
                     diagnostic);
             }
         }
 
-        private static Document ReplaceConditionWithChild(Document document, SyntaxNode root, SyntaxNode conditionalOperationNode, SyntaxNode childOperationNode)
+        private static Document ReplaceConditionWithChild(Document document, SyntaxNode root,
+                                                          SyntaxNode conditionalOperationNode,
+                                                          SyntaxNode childOperationNode, bool hasMultipleStatements)
         {
-            var newNode = childOperationNode.WithAdditionalAnnotations(Formatter.Annotation);
-            var newRoot = root.ReplaceNode(conditionalOperationNode, newNode);
+            if (!hasMultipleStatements)
+            {
+                var newNode = childOperationNode.WithAdditionalAnnotations(Formatter.Annotation);
+                var newRoot = root.ReplaceNode(conditionalOperationNode, newNode);
 
-            return document.WithSyntaxRoot(newRoot);
+                return document.WithSyntaxRoot(newRoot);
+            }
+            else
+            {
+                //conditionalOperationNode
+                throw new NotImplementedException();
+            }
         }
 
         private static bool TryParseLocationInfo(Diagnostic diagnostic, string propertyKey, out TextSpan span)

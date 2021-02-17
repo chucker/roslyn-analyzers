@@ -26,8 +26,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
         public const string AdditionalDocumentLocationInfoSeparator = ";;";
 
-        public const string ConditionalOperation = nameof(ConditionalOperation);
-        public const string ChildStatementOperation = nameof(ChildStatementOperation);
+        public struct PropertyKeys
+        {
+            public const string ConditionalOperation = nameof(ConditionalOperation);
+            public const string ChildStatementOperation = nameof(ChildStatementOperation);
+            public const string HasMultipleStatements = nameof(HasMultipleStatements);
+        }
 
         internal static readonly DiagnosticDescriptor Rule = DiagnosticDescriptorHelper.Create(
             RuleId,
@@ -68,40 +72,21 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 if (invocationOperation.Parent is not IConditionalOperation parentConditionalOperation)
                     return;
 
-                // we only want to report this diagnostic if the Contains/Remove pair is all there is
-
                 if (parentConditionalOperation.WhenFalse == null &&
-                    parentConditionalOperation.WhenTrue.Children.HasExactly(1))
+                    parentConditionalOperation.WhenTrue.Children?.Any() == true)
                 {
-                    var properties = ImmutableDictionary.CreateBuilder<string, string?>();
-                    properties[ConditionalOperation] = CreateLocationInfo(parentConditionalOperation.Syntax);
+                    var properties = ImmutableDictionary.CreateBuilder<string, string>();
+                    properties[PropertyKeys.ConditionalOperation] = CreateLocationInfo(parentConditionalOperation.Syntax);
 
-                    switch (parentConditionalOperation.WhenTrue.Children.First())
+                    var nestedInvocationOperation = parentConditionalOperation.WhenTrue.Children.OfType<IExpressionStatementOperation>()
+                            .FirstOrDefault(o => ((IInvocationOperation)o.Operation).TargetMethod.Name == "Remove");
+
+                    if (nestedInvocationOperation != null)
                     {
-                        case IInvocationOperation childInvocationOperation:
-                            if (childInvocationOperation.TargetMethod.Name == "Remove")
-                            {
-                                properties[ChildStatementOperation] = CreateLocationInfo(childInvocationOperation.Syntax.Parent);
+                        properties[PropertyKeys.ChildStatementOperation] = CreateLocationInfo(nestedInvocationOperation.Syntax);
+                        properties[PropertyKeys.HasMultipleStatements] = parentConditionalOperation.WhenTrue.Children.HasMoreThan(1).ToString();
 
-                                context.ReportDiagnostic(invocationOperation.CreateDiagnostic(Rule, properties.ToImmutable()));
-                            }
-
-                            break;
-                        case IExpressionStatementOperation childStatementOperation:
-                            // if the if statement contains a block, only proceed if that block contains a single statement
-
-                            if (childStatementOperation.Children.HasExactly(1) &&
-                                childStatementOperation.Children.First() is IInvocationOperation nestedInvocationOperation &&
-                                nestedInvocationOperation.TargetMethod.Name == "Remove")
-                            {
-                                properties[ChildStatementOperation] = CreateLocationInfo(nestedInvocationOperation.Syntax.Parent);
-
-                                context.ReportDiagnostic(invocationOperation.CreateDiagnostic(Rule, properties.ToImmutable()));
-                            }
-
-                            break;
-                        default:
-                            break;
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, invocationOperation.Syntax.GetLocation(), properties.ToImmutable()));
                     }
                 }
             }
