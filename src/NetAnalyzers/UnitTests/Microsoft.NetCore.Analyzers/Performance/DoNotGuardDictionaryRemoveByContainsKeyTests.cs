@@ -5,10 +5,10 @@ using Xunit;
 
 using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
-    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKeyFixer>;
+    Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpDoNotGuardDictionaryRemoveByContainsKeyFixer>;
 using VerifyVB = Test.Utilities.VisualBasicCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
-    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKeyFixer>;
+    Microsoft.NetCore.VisualBasic.Analyzers.Performance.BasicDoNotGuardDictionaryRemoveByContainsKeyFixer>;
 
 namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 {
@@ -181,7 +181,7 @@ namespace Testopolis
         }
 
         [Fact]
-        public async Task AdditionalStatements_NoDiagnostic_CS()
+        public async Task AdditionalStatements_OffersFixer_CS()
         {
             string source = @"
 " + CSUsings + @"
@@ -223,6 +223,8 @@ namespace Testopolis
             await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
 
+        [Fact]
+        public async Task RemoveIsTheOnlyStatement_OffersFixer_VB()
         {
             string source = @"
 " + VBUsings + @"

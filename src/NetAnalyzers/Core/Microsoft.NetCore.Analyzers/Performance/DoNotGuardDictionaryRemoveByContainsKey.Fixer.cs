@@ -15,7 +15,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace Microsoft.NetCore.Analyzers.Performance
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, LanguageNames.VisualBasic), Shared]
-    public sealed class DoNotGuardDictionaryRemoveByContainsKeyFixer : CodeFixProvider
+    public abstract class DoNotGuardDictionaryRemoveByContainsKeyFixer : CodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds { get; } =
             ImmutableArray.Create(DoNotGuardDictionaryRemoveByContainsKey.RuleId);
@@ -50,9 +50,9 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
         }
 
-        private static Document ReplaceConditionWithChild(Document document, SyntaxNode root,
-                                                          SyntaxNode conditionalOperationNode,
-                                                          SyntaxNode childOperationNode, bool hasMultipleStatements)
+        private Document ReplaceConditionWithChild(Document document, SyntaxNode root,
+                                                   SyntaxNode conditionalOperationNode, SyntaxNode childOperationNode,
+                                                   bool hasMultipleStatements)
         {
             if (!hasMultipleStatements)
             {
@@ -63,10 +63,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
             else
             {
-                //conditionalOperationNode
-                throw new NotImplementedException();
+                return ReplaceConditionWithChildRetainingStatements(document, root, conditionalOperationNode,
+                                                                    childOperationNode);
             }
         }
+
+        protected abstract Document ReplaceConditionWithChildRetainingStatements(Document document, SyntaxNode root, SyntaxNode conditionalOperationNode, SyntaxNode childOperationNode);
 
         private static bool TryParseLocationInfo(Diagnostic diagnostic, string propertyKey, out TextSpan span)
         {
