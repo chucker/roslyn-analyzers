@@ -265,7 +265,7 @@ Namespace Testopolis
         Public MyDictionary As New Dictionary(Of String, String)()
 
         Public Sub New()
-            If MyDictionary.ContainsKey(""Key"") Then
+            If [|MyDictionary.ContainsKey(""Key"")|] Then
                 MyDictionary.Remove(""Key"")
                 Console.WriteLine()
             End If

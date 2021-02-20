@@ -4,7 +4,6 @@ using System.Composition;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.NetCore.Analyzers.Performance;
 
 namespace Microsoft.NetCore.CSharp.Analyzers.Performance
@@ -22,13 +21,13 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
                 return document;
             }
 
-            // FIXME: doesn't clean up whitespace
-            var newNode = expressionStatement.Expression.WithAdditionalAnnotations(Formatter.Annotation);
+            // remove Remove() call inside the block
+            var newRoot = root.RemoveNode(childOperationNode, SyntaxRemoveOptions.KeepNoTrivia);
 
-            var newRoot = root.ReplaceNode(ifStatement.Condition, newNode);
-
-            // FIXME: doesn't work
-            newRoot = newRoot.RemoveNode(childOperationNode, SyntaxRemoveOptions.KeepNoTrivia);
+            // replace ContainsKey() condition with Remove()
+            var newNode = expressionStatement.Expression.WithoutTrivia();
+            var oldConditionNode = newRoot.FindNode(ifStatement.Condition.Span);
+            newRoot = newRoot.ReplaceNode(oldConditionNode, newNode);
 
             // TODO: re-apply numerous suggestions from other branch
 
