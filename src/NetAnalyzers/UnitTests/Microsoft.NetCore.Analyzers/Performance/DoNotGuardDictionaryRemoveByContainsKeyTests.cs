@@ -1,55 +1,43 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.Globalization;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 
 using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
-    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
-    Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpDoNotGuardDictionaryRemoveByContainsKeyFixer>;
+    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
+    Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpDoNotGuardDictionaryOperationsFixer>;
 using VerifyVB = Test.Utilities.VisualBasicCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
-    Microsoft.NetCore.VisualBasic.Analyzers.Performance.BasicDoNotGuardDictionaryRemoveByContainsKeyFixer>;
+    Microsoft.NetCore.VisualBasic.Analyzers.Performance.BasicDoNotGuardDictionaryOperationsFixer>;
 
 namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 {
     public class DoNotGuardDictionaryRemoveByContainsKeyTests
     {
+        private const string RemoveIsTheOnlyStatement = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|})
+                {|#1:MyDictionary.Remove(""Key"")|};";
+        
+        private const string RemoveIsTheOnlyStatementFixed = @"
+            MyDictionary.Remove(""Key"");";
+        
         #region Tests
         [Fact]
-        public async Task RemoveIsTheOnlyStatement_OffersFixer_CS()
+        public Task RemoveIsTheOnlyStatement_OffersFixer_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+            var source = CreateCSharpCode(RemoveIsTheOnlyStatement);
+            var fixedSource = CreateCSharpCode(RemoveIsTheOnlyStatementFixed);
 
-        public MyClass()
-        {
-            if ([|MyDictionary.ContainsKey(""Key"")|])
-                MyDictionary.Remove(""Key"");
-        }
-    }
-}";
-
-            string fixedSource = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
-            MyDictionary.Remove(""Key"");
-        }
-    }
-}";
-            await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
+            return new VerifyCS.Test
+            {
+                TestCode = source,
+                FixedCode = fixedSource,
+                ExpectedDiagnostics = { StandardDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.NetCore.NetCoreApp31
+            }.RunAsync();
         }
 
         [Fact]
@@ -349,6 +337,31 @@ End Namespace";
         #endregion
 
         #region Helpers
+        private const string CSharpTemplate = @"
+using System;
+using System.Collections.Generic;
+
+namespace Test
+{{
+    public class MyClass
+    {{
+        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+
+        public MyClass() {{
+            {0}
+        }}
+    }}
+}}";
+        private static string CreateCSharpCode(string content)
+        {
+            return string.Format(CultureInfo.InvariantCulture, CSharpTemplate, content);
+        }
+
+        private static DiagnosticResult StandardDiagnostic()
+        {
+            return VerifyCS.Diagnostic(DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardRemoveByContainsKeyRule).WithLocation(0).WithLocation(1);
+        }
+
         private const string CSUsings = @"using System;
 using System.Collections.Generic;";
 
