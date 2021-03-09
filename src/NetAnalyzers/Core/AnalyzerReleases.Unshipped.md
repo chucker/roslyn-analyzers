@@ -3,10 +3,6 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 CA1418 | Interoperability | Warning | UseValidPlatformString, [Documentation](https://docs.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1418)
-
-### New Rules
-Rule ID | Category | Severity | Notes
---------|----------|----------|-------
 CA1839 | Performance | Info | DoNotGuardDictionaryRemoveByContainsKey, [Documentation](https://docs.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1839)
 
 ### Removed Rules
