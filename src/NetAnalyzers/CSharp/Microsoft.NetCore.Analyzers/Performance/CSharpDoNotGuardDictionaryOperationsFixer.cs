@@ -6,12 +6,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.NetCore.Analyzers.Performance;
 
 namespace Microsoft.NetCore.CSharp.Analyzers.Performance
@@ -23,15 +21,15 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> codeActionMethod)
         {
             codeActionMethod = null!;
-            
-            if(containsKeyNode is not InvocationExpressionSyntax containsKeyInvocation || containsKeyInvocation.Expression is not MemberAccessExpressionSyntax containsKeyAccess)
+
+            if (containsKeyNode is not InvocationExpressionSyntax containsKeyInvocation || containsKeyInvocation.Expression is not MemberAccessExpressionSyntax containsKeyAccess)
             {
                 return false;
             }
-            
+
             if (dictionaryAccessNode is ElementAccessExpressionSyntax elementAccess)
             {
-                
+
                 codeActionMethod = ct => FixIndexerAccess(document, containsKeyInvocation, containsKeyAccess, elementAccess, ct);
 
                 return true;
@@ -45,7 +43,7 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 
                     return true;
                 }
-                
+
                 if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName)
                 {
                     codeActionMethod = ct => FixRemoveAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
@@ -79,7 +77,7 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
         {
             var editor = await DocumentEditor.CreateAsync(document, ct).ConfigureAwait(false);
             var ifStatement = containsKeyInvocation.FirstAncestorOrSelf<IfStatementSyntax>();
-            
+
             // ContainsKey check is only condition in if statement.
             if (ifStatement.Condition is InvocationExpressionSyntax && ifStatement.Statement is ExpressionStatementSyntax)
             {
@@ -88,10 +86,10 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 
                 return editor.GetChangedDocument();
             }
-            
+
             editor.ReplaceNode(containsKeyInvocation, removeInvocation);
             editor.RemoveNode(removeInvocation);
-            
+
             return editor.GetChangedDocument();
         }
 

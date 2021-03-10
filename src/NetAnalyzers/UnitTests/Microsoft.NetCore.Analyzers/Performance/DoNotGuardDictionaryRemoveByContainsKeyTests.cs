@@ -2,7 +2,6 @@
 
 using System.Globalization;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 
@@ -20,45 +19,38 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         private const string RemoveIsTheOnlyStatement = @"
             if ({|#0:MyDictionary.ContainsKey(""Key"")|})
                 {|#1:MyDictionary.Remove(""Key"")|};";
-        
+
         private const string RemoveIsTheOnlyStatementFixed = @"
             MyDictionary.Remove(""Key"");";
-        
+
         #region Tests
         [Fact]
-        public Task RemoveIsTheOnlyStatement_OffersFixer_CS()
+        public async Task RemoveIsTheOnlyStatement_OffersFixer_CS()
         {
             var source = CreateCSharpCode(RemoveIsTheOnlyStatement);
             var fixedSource = CreateCSharpCode(RemoveIsTheOnlyStatementFixed);
 
-            return new VerifyCS.Test
-            {
-                TestCode = source,
-                FixedCode = fixedSource,
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.NetCore.NetCoreApp31
-            }.RunAsync();
+            await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
 
         [Fact]
         public async Task RemoveWithOutValueIsTheOnlyStatement_OffersFixer_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             if ([|MyDictionary.ContainsKey(""Key"")|])
                 MyDictionary.Remove(""Key"", out var value);
-        }" + CSNamespaceAndClassEnd;
-
-            string fixedSource = CSUsings + CSNamespaceAndClassStart + @"
+        }");
+            string fixedSource = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             MyDictionary.Remove(""Key"", out var value);
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await new VerifyCS.Test
             {
@@ -71,7 +63,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task RemoveIsTheOnlyStatementInABlock_OffersFixer_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -80,15 +72,15 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 MyDictionary.Remove(""Key"");
             }
-        }" + CSNamespaceAndClassEnd;
+        }");
 
-            string fixedSource = CSUsings + CSNamespaceAndClassStart + @"
+            string fixedSource = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
@@ -96,7 +88,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task HasElseBlock_OffersFixer_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -109,9 +101,9 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 throw new Exception(""Key doesn't exist"");
             }
-        }" + CSNamespaceAndClassEnd;
+        }");
 
-            string fixedSource = CSUsings + CSNamespaceAndClassStart + @"
+            string fixedSource = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -120,7 +112,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 throw new Exception(""Key doesn't exist"");
             }
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
@@ -128,7 +120,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task HasElseStatement_OffersFixer_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -137,16 +129,16 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 MyDictionary.Remove(""Key"");
             else
                 throw new Exception(""Key doesn't exist"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
-            string fixedSource = CSUsings + CSNamespaceAndClassStart + @"
+            string fixedSource = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             if (!MyDictionary.Remove(""Key""))
                 throw new Exception(""Key doesn't exist"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
@@ -154,14 +146,14 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task NegatedCondition_ReportsDiagnostic_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             if (![|MyDictionary.ContainsKey(""Key"")|])
                 MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyAnalyzerAsync(source);
         }
@@ -169,14 +161,14 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task AdditionalCondition_NoDiagnostic_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             if (MyDictionary.ContainsKey(""Key"") && MyDictionary.Count > 2)
                 MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyAnalyzerAsync(source);
         }
@@ -184,7 +176,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task ConditionInVariable_NoDiagnostic_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -192,7 +184,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             var result = MyDictionary.ContainsKey(""Key"");
             if (result)
 	            MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyAnalyzerAsync(source);
         }
@@ -200,7 +192,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task RemoveInSeparateLine_NoDiagnostic_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -208,7 +200,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             if (MyDictionary.ContainsKey(""Key""))
 	            _ = MyDictionary.Count;
 	        MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyAnalyzerAsync(source);
         }
@@ -216,7 +208,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task AdditionalStatements_ReportsDiagnostic_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -227,7 +219,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 Console.WriteLine();
             }
         }
-        " + CSNamespaceAndClassEnd;
+        ");
 
             await VerifyCS.VerifyAnalyzerAsync(source);
         }
@@ -235,7 +227,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         [Fact]
         public async Task TriviaIsPreserved_CS()
         {
-            string source = CSUsings + CSNamespaceAndClassStart + @"
+            string source = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
@@ -245,16 +237,16 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 MyDictionary.Remove(""Key"");
             }
-        }" + CSNamespaceAndClassEnd;
+        }");
 
-            string fixedSource = CSUsings + CSNamespaceAndClassStart + @"
+            string fixedSource = CreateCSharpCode(@"
         private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
 
         public MyClass()
         {
             // reticulates the splines
             MyDictionary.Remove(""Key"");
-        }" + CSNamespaceAndClassEnd;
+        }");
 
             await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
         }
@@ -391,19 +383,6 @@ namespace Test
         {
             return VerifyCS.Diagnostic(DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardRemoveByContainsKeyRule).WithLocation(0).WithLocation(1);
         }
-
-        private const string CSUsings = @"using System;
-using System.Collections.Generic;";
-
-        private const string CSNamespaceAndClassStart = @"namespace Testopolis
-{
-    public class MyClass
-    {
-";
-
-        private const string CSNamespaceAndClassEnd = @"
-    }
-}";
 
         private const string VBUsings = @"Imports System
 Imports System.Collections.Generic";

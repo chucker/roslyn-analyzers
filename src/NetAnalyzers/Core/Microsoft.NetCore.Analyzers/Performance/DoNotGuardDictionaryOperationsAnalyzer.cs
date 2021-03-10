@@ -29,7 +29,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
         private static readonly LocalizableString s_localizableDescription =
             CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyDescription));
-        
+
         internal static readonly DiagnosticDescriptor DoNotGuardRemoveByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardRemoveByContainsKeyId,
             s_localizableTitle,
@@ -39,7 +39,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             s_localizableDescription,
             isPortedFxCopRule: false,
             isDataflowRule: false);
-        
+
         internal static readonly DiagnosticDescriptor DoNotGuardIndexerAccessByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardIndexerAccessByContainsKeyId,
             s_localizableTitle,
@@ -49,7 +49,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             s_localizableDescription,
             isPortedFxCopRule: false,
             isDataflowRule: false);
-        
+
         internal static readonly DiagnosticDescriptor DoNotGuardAddByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardAddByContainsKeyId,
             s_localizableTitle,
@@ -65,8 +65,8 @@ namespace Microsoft.NetCore.Analyzers.Performance
         internal const string RemoveMethodName = nameof(IDictionary.Remove);
         private const string IndexerName = "this[]";
         private const string IndexerNameVb = "Item";
-        
-        private static readonly Dictionary<Func<IOperation, ISymbol, bool>, DiagnosticDescriptor> DiagnosticsByCondition = new(3) 
+
+        private static readonly Dictionary<Func<IOperation, ISymbol, bool>, DiagnosticDescriptor> DiagnosticsByCondition = new(3)
         {
             [(operation, dictionaryType) => operation is IPropertyReferenceOperation propertyReference && IsDictionaryType(propertyReference.Property.ContainingType, dictionaryType) && propertyReference.Property.IsIndexer && (propertyReference.Property.OriginalDefinition.Name == IndexerName || propertyReference.Language == "Visual Basic" && propertyReference.Property.OriginalDefinition.Name == IndexerNameVb)] = DoNotGuardIndexerAccessByContainsKeyRule,
             [(operation, dictionaryType) => operation is IInvocationOperation invocation && IsDictionaryType(invocation.TargetMethod.ContainingType, dictionaryType) && invocation.TargetMethod.Name == AddMethodName] = DoNotGuardAddByContainsKeyRule,
@@ -79,7 +79,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
         }
-        
+
         private void OnCompilationStart(CompilationStartAnalysisContext compilationContext)
         {
             if (!compilationContext.Compilation.TryGetOrCreateTypeByMetadataName(WellKnownTypeNames.SystemCollectionsGenericIDictionary2, out var dictionaryType))
@@ -97,7 +97,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             {
                 return;
             }
-            
+
             context.ReportDiagnostic(Diagnostic.Create(diagnostic, invocation.Syntax.GetLocation(), ImmutableArray.Create(location)));
         }
 
@@ -122,8 +122,8 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
 
             return false;
-        } 
-        
+        }
+
         private static bool TryGetParentConditionalOperation(IOperation derivedOperation, [NotNullWhen(true)] out IConditionalOperation? conditionalOperation)
         {
             conditionalOperation = null;
@@ -146,7 +146,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             return IsDictionaryType(invocationOperation.TargetMethod.ContainingType, dictionaryType) && invocationOperation.TargetMethod.Name == ContainsKeyMethodName;
         }
-        
+
         private static bool IsDictionaryType(INamedTypeSymbol derived, ISymbol dictionaryType)
         {
             var constructedDictionaryType = derived.GetBaseTypesAndThis()
@@ -159,7 +159,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         }
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(DoNotGuardRemoveByContainsKeyRule, DoNotGuardIndexerAccessByContainsKeyRule, DoNotGuardAddByContainsKeyRule);
-        
+
         private static LocalizableString CreateResource(string resourceName)
         {
             return new LocalizableResourceString(resourceName, MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
