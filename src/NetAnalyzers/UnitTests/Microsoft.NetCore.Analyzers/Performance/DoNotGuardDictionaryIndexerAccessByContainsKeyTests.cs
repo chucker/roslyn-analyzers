@@ -259,8 +259,8 @@ End Namespace";
             Dim key As String = ""key""
             Dim data As ConcurrentDictionary(Of String, String) = New ConcurrentDictionary(Of String, String)()
 
-            If data.ContainsKey(key) Then
-                Return data(key)
+            If {|#0:data.ContainsKey(key)|} Then
+                Return {|#1:data(key)|}
             End If
 
             Return 0";
@@ -280,10 +280,10 @@ End Namespace";
             Dim key As String = ""key""
             Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
 
-            If data.ContainsKey(key) Then
+            If {|#0:data.ContainsKey(key)|} Then
                 Console.WriteLine(2)
                 Dim x = 2
-                Console.WriteLine(data(key))
+                Console.WriteLine({|#1:data(key)|})
 
                 Return x
             End If
@@ -304,46 +304,17 @@ End Namespace";
 
             Return 0";
 
-        private const string VbDictionaryContainsKeyMultipleConditions = @"
-            Dim key As String = ""key""
-            Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
-
-            If key = ""key"" AndAlso data.ContainsKey(key) Then
-                Console.WriteLine(2)
-                Dim x = 2
-                Console.WriteLine(data(key))
-                
-                Return x
-            End If
-
-            Return 0";
-
-        private const string VbDictionaryContainsKeyMultipleConditionsFixed = @"
-            Dim key As String = ""key""
-            Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
-            
-            Dim value As Integer
-            If key = ""key"" AndAlso data.TryGetValue(key, value) Then
-                Console.WriteLine(2)
-                Dim x = 2
-                Console.WriteLine(value)
-                
-                Return x
-            End If
-
-            Return 0";
-
         private const string VbDictionaryContainsKeyNestedDictionaryAccess = @"
             Dim key As String = ""key""
             Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
 
-            If key = ""key"" AndAlso data.ContainsKey(key) Then
+            If {|#0:data.ContainsKey(key)|} Then
                 Console.WriteLine(2)
                 Dim x = 2
                 Dim wrapper = Function(i As Integer) As Integer
                     Return i
                 End Function
-                Console.WriteLine(wrapper(data(key)))
+                Console.WriteLine(wrapper({|#0:data(key)|}))
         
                 Return x
             End If
@@ -355,7 +326,7 @@ End Namespace";
             Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
 
             Dim value As Integer
-            If key = ""key"" AndAlso data.TryGetValue(key, value) Then
+            If data.TryGetValue(key, value) Then
                 Console.WriteLine(2)
                 Dim x = 2
                 Dim wrapper = Function(i As Integer) As Integer
@@ -367,19 +338,6 @@ End Namespace";
             End If
 
             Return 0";
-
-        private const string VbDictionaryContainsKeyTernary = @"
-            Dim key As String = ""key""
-            Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
-            
-            Return If(data.ContainsKey(key), data(key), 2)";
-
-        private const string VbDictionaryContainsKeyTernaryFixed = @"
-            Dim key As String = ""key""
-            Dim data As IDictionary(Of String, Integer) = New Dictionary(Of String, Integer)()
-            
-            Dim value As Integer
-            Return If(data.TryGetValue(key, value), value, 2)";
 
         #region NoDiagnostic
 
@@ -465,9 +423,7 @@ End Namespace";
         [InlineData(VbDictionaryContainsKeyPrintValue, VbDictionaryContainsKeyPrintValueFixed)]
         [InlineData(VbDictionaryContainsKeyReturnValue, VbDictionaryContainsKeyReturnValueFixed)]
         [InlineData(VbDictionaryContainsKeyMultipleStatementsInIf, VbDictionaryContainsKeyMultipleStatementsInIfFixed)]
-        [InlineData(VbDictionaryContainsKeyMultipleConditions, VbDictionaryContainsKeyMultipleConditionsFixed)]
         [InlineData(VbDictionaryContainsKeyNestedDictionaryAccess, VbDictionaryContainsKeyNestedDictionaryAccessFixed)]
-        [InlineData(VbDictionaryContainsKeyTernary, VbDictionaryContainsKeyTernaryFixed)]
         public Task VbShouldReportDiagnostic(string codeSnippet, string fixedCodeSnippet)
         {
             string testCode = CreateVbCode(codeSnippet);

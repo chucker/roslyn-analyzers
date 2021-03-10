@@ -32,12 +32,14 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
             Dim dictionaryAccessInvocation = TryCast(dictionaryAccessNode, InvocationExpressionSyntax)
             Dim memberAccess = TryCast(dictionaryAccessInvocation?.Expression, MemberAccessExpressionSyntax)
-            If dictionaryAccessInvocation IsNot Nothing And memberAccess IsNot Nothing And (memberAccess.Name.Identifier.ValueText = DoNotGuardDictionaryOperationsAnalyzer.AddMethodName Or memberAccess.Name.Identifier.ValueText = DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName)
-                codeActionMethod = Function(token) 
-                    Return FixDictionaryAccess(document, containsKeyInvocation, dictionaryAccessInvocation, token)
-                End function
+            If dictionaryAccessInvocation IsNot Nothing And memberAccess IsNot Nothing
+                If memberAccess.Name.Identifier.ValueText = DoNotGuardDictionaryOperationsAnalyzer.AddMethodName Or memberAccess.Name.Identifier.ValueText = DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName
+                    codeActionMethod = Function(token) 
+                        Return FixDictionaryAccess(document, containsKeyInvocation, dictionaryAccessInvocation, token)
+                    End function
 
-                Return True
+                    Return True
+                End If
             End If
 
             If dictionaryAccessInvocation IsNot Nothing
