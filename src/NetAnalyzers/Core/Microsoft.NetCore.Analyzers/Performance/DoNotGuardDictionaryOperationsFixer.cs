@@ -19,7 +19,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var diagnostic = context.Diagnostics.FirstOrDefault();
-            var dictionaryAccessLocation = diagnostic?.AdditionalLocations[0];
+            var dictionaryAccessLocation = diagnostic?.AdditionalLocations.FirstOrDefault();
             if (dictionaryAccessLocation is null)
             {
                 return;
