@@ -8,6 +8,7 @@ Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Imports Microsoft.NetCore.Analyzers.Performance
 
 Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
+
     <ExportCodeFixProvider(LanguageNames.VisualBasic)>
     Public NotInheritable Class BasicDoNotGuardDictionaryOperationsFixer
         Inherits DoNotGuardDictionaryOperationsFixer
