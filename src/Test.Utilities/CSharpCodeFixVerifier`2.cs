@@ -40,10 +40,10 @@ namespace Test.Utilities
         public static Task VerifyCodeFixAsync(string source, DiagnosticResult expected, string fixedSource)
             => VerifyCodeFixAsync(source, new[] { expected }, fixedSource);
 
-        public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource) 
+        public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource)
             => VerifyCodeFixAsync(source, expected, fixedSource, MarkupOptions.None);
 
-        public static async Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, MarkupOptions markupOptions)
+        public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, MarkupOptions markupOptions)
         {
             var test = new Test
             {
@@ -52,7 +52,9 @@ namespace Test.Utilities
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
-            await test.RunAsync();
+            test.MarkupOptions = markupOptions;
+
+            return test.RunAsync();
         }
     }
 }

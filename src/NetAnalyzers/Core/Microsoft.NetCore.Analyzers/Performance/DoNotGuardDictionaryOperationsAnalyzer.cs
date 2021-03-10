@@ -21,15 +21,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
         public const string DoNotGuardIndexerAccessByContainsKeyId = "CA1840";
         public const string DoNotGuardAddByContainsKeyId = "CA1841";
 
-        private static readonly LocalizableString s_localizableTitle =
-            CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyTitle));
+        private static readonly LocalizableString s_localizableTitle = CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyTitle));
 
-        private static readonly LocalizableString
-            s_localizableMessage = CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyMessage));
+        private static readonly LocalizableString s_localizableMessage = CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyMessage));
 
-        private static readonly LocalizableString s_localizableDescription =
-            CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyDescription));
-        
+        private static readonly LocalizableString s_localizableDescription = CreateResource(nameof(MicrosoftNetCoreAnalyzersResources.DoNotGuardDictionaryRemoveByContainsKeyDescription));
+
         internal static readonly DiagnosticDescriptor DoNotGuardRemoveByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardRemoveByContainsKeyId,
             s_localizableTitle,
@@ -39,7 +36,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             s_localizableDescription,
             isPortedFxCopRule: false,
             isDataflowRule: false);
-        
+
         internal static readonly DiagnosticDescriptor DoNotGuardIndexerAccessByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardIndexerAccessByContainsKeyId,
             s_localizableTitle,
@@ -49,7 +46,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             s_localizableDescription,
             isPortedFxCopRule: false,
             isDataflowRule: false);
-        
+
         internal static readonly DiagnosticDescriptor DoNotGuardAddByContainsKeyRule = DiagnosticDescriptorHelper.Create(
             DoNotGuardAddByContainsKeyId,
             s_localizableTitle,
@@ -65,12 +62,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
         internal const string RemoveMethodName = nameof(IDictionary.Remove);
         private const string IndexerName = "this[]";
         private const string IndexerNameVb = "Item";
-        
-        private static readonly Dictionary<Func<IOperation, ISymbol, bool>, DiagnosticDescriptor> DiagnosticsByCondition = new(3) 
+
+        private static readonly Dictionary<Func<IOperation, IOperation, ISymbol, bool>, DiagnosticDescriptor> s_diagnosticsByCondition = new(3)
         {
-            [(operation, dictionaryType) => operation is IPropertyReferenceOperation propertyReference && IsDictionaryType(propertyReference.Property.ContainingType, dictionaryType) && propertyReference.Property.IsIndexer && (propertyReference.Property.OriginalDefinition.Name == IndexerName || propertyReference.Language == "Visual Basic" && propertyReference.Property.OriginalDefinition.Name == IndexerNameVb)] = DoNotGuardIndexerAccessByContainsKeyRule,
-            [(operation, dictionaryType) => operation is IInvocationOperation invocation && IsDictionaryType(invocation.TargetMethod.ContainingType, dictionaryType) && invocation.TargetMethod.Name == AddMethodName] = DoNotGuardAddByContainsKeyRule,
-            [(operation, dictionaryType) => operation is IInvocationOperation invocation && IsDictionaryType(invocation.TargetMethod.ContainingType, dictionaryType) && invocation.TargetMethod.Name == RemoveMethodName] = DoNotGuardRemoveByContainsKeyRule
+            [IsDictionaryIndexerAccess] = DoNotGuardIndexerAccessByContainsKeyRule,
+            [(operation, containsKeyArgument, dictionaryType) => IsDictionaryMethodAccess(operation, containsKeyArgument, dictionaryType, AddMethodName)] = DoNotGuardAddByContainsKeyRule,
+            [(operation, containsKeyArgument, dictionaryType) => IsDictionaryMethodAccess(operation, containsKeyArgument, dictionaryType, RemoveMethodName)] = DoNotGuardRemoveByContainsKeyRule
         };
 
         public override void Initialize(AnalysisContext context)
@@ -79,8 +76,8 @@ namespace Microsoft.NetCore.Analyzers.Performance
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(OnCompilationStart);
         }
-        
-        private void OnCompilationStart(CompilationStartAnalysisContext compilationContext)
+
+        private static void OnCompilationStart(CompilationStartAnalysisContext compilationContext)
         {
             if (!compilationContext.Compilation.TryGetOrCreateTypeByMetadataName(WellKnownTypeNames.SystemCollectionsGenericIDictionary2, out var dictionaryType))
             {
@@ -93,15 +90,20 @@ namespace Microsoft.NetCore.Analyzers.Performance
         private static void OnOperationAction(OperationAnalysisContext context, INamedTypeSymbol dictionaryType)
         {
             var invocation = (IInvocationOperation)context.Operation;
-            if (!IsDictionaryContainsKeyInvocation(invocation, dictionaryType) || !TryGetParentConditionalOperation(invocation, out var conditionalOperation) || !TryGetDiagnostic(conditionalOperation.WhenTrue, dictionaryType, out var diagnostic, out var location))
+            if (!IsDictionaryContainsKeyInvocation(invocation, dictionaryType)
+                || !TryGetParentConditionalOperation(invocation, out var conditionalOperation)
+                // There are multiple conditions and it would be difficult to evaluate possible side-effects.
+                || (conditionalOperation.Condition is not IUnaryOperation && conditionalOperation.Condition is not IInvocationOperation)
+                || conditionalOperation.WhenFalse is not null
+                || !TryGetDiagnostic(conditionalOperation.WhenTrue, invocation, dictionaryType, out var diagnostic, out var location))
             {
                 return;
             }
-            
+
             context.ReportDiagnostic(Diagnostic.Create(diagnostic, invocation.Syntax.GetLocation(), ImmutableArray.Create(location)));
         }
 
-        private static bool TryGetDiagnostic(IOperation whenTrueOperation, ISymbol dictionaryType, [NotNullWhen(true)] out DiagnosticDescriptor? diagnostic, [NotNullWhen(true)] out Location? location)
+        private static bool TryGetDiagnostic(IOperation whenTrueOperation, IInvocationOperation containsKeyInvocation, ISymbol dictionaryType, [NotNullWhen(true)] out DiagnosticDescriptor? diagnostic, [NotNullWhen(true)] out Location? location)
         {
             location = default;
             diagnostic = default;
@@ -109,9 +111,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
             ImmutableArray<IOperation> operations = whenTrueOperation is IBlockOperation blockOperation ? blockOperation.Operations : ImmutableArray.Create(whenTrueOperation);
             foreach (var operation in operations)
             {
-                foreach (var keyValuePair in DiagnosticsByCondition)
+                if (IsDictionaryModificationOperation(operation, containsKeyInvocation))
                 {
-                    if (operation.HasAnyOperationDescendant(op => keyValuePair.Key(op, dictionaryType), out var diagnostableOperation))
+                    return false;
+                }
+                
+                foreach (var keyValuePair in s_diagnosticsByCondition)
+                {
+                    if (operation.HasAnyOperationDescendant(op => keyValuePair.Key(op, containsKeyInvocation.Arguments[0].Value, dictionaryType), out var diagnostableOperation))
                     {
                         diagnostic = keyValuePair.Value;
                         location = diagnostableOperation.Syntax.GetLocation();
@@ -122,8 +129,15 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
 
             return false;
-        } 
-        
+        }
+
+        private static bool IsDictionaryModificationOperation(IOperation operation, IInvocationOperation containsKeyInvocation)
+        {
+            return operation.HasAnyOperationDescendant(op => op is IAssignmentOperation { Target: IPropertyReferenceOperation propertyReference } 
+                                                               && IsDataReferenceEqual(propertyReference.Instance, containsKeyInvocation.Instance) 
+                                                               && IsDataReferenceEqual(propertyReference.Arguments[0].Value, containsKeyInvocation.Arguments[0].Value));
+        }
+
         private static bool TryGetParentConditionalOperation(IOperation derivedOperation, [NotNullWhen(true)] out IConditionalOperation? conditionalOperation)
         {
             conditionalOperation = null;
@@ -146,7 +160,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             return IsDictionaryType(invocationOperation.TargetMethod.ContainingType, dictionaryType) && invocationOperation.TargetMethod.Name == ContainsKeyMethodName;
         }
-        
+
         private static bool IsDictionaryType(INamedTypeSymbol derived, ISymbol dictionaryType)
         {
             var constructedDictionaryType = derived.GetBaseTypesAndThis()
@@ -158,8 +172,46 @@ namespace Microsoft.NetCore.Analyzers.Performance
             return constructedDictionaryType is not null;
         }
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(DoNotGuardRemoveByContainsKeyRule, DoNotGuardIndexerAccessByContainsKeyRule, DoNotGuardAddByContainsKeyRule);
+        private static bool IsDictionaryIndexerAccess(IOperation operation, IOperation containsKeyArgument, ISymbol dictionaryType)
+        {
+            return operation is IPropertyReferenceOperation propertyReference 
+                   && IsDictionaryType(propertyReference.Property.ContainingType, dictionaryType)
+                   && operation.Parent is not IAssignmentOperation
+                   && propertyReference.Arguments.Length == 1
+                   && IsDataReferenceEqual(propertyReference.Arguments[0].Value, containsKeyArgument)
+                   && propertyReference.Property.IsIndexer
+                   && (propertyReference.Property.OriginalDefinition.Name == IndexerName ||
+                       propertyReference.Language == "Visual Basic" && propertyReference.Property.OriginalDefinition.Name == IndexerNameVb);
+        }
+
+        private static bool IsDictionaryMethodAccess(IOperation operation, IOperation containsKeyArgument, ISymbol dictionaryType, string methodName)
+        {
+            return operation is IInvocationOperation invocation 
+                   && IsDictionaryType(invocation.TargetMethod.ContainingType, dictionaryType)
+                   && IsDataReferenceEqual(invocation.Arguments[0].Value, containsKeyArgument)
+                   && invocation.TargetMethod.Name == methodName;
+        }
         
+        private static bool IsDataReferenceEqual(IOperation a, IOperation b)
+        {
+            if (a.Kind != b.Kind)
+            {
+                return false;
+            }
+
+            return a switch
+            {
+                ILocalReferenceOperation aLocalOperation when b is ILocalReferenceOperation bLocalOperation => aLocalOperation.Local.Equals(bLocalOperation.Local, SymbolEqualityComparer.Default),
+                IFieldReferenceOperation aFieldOperation when b is IFieldReferenceOperation bFieldOperation => aFieldOperation.Field.Equals(bFieldOperation.Field, SymbolEqualityComparer.Default), 
+                ILiteralOperation aLiteralOperation when b is ILiteralOperation bLiteralOperation => aLiteralOperation.ConstantValue.HasValue && bLiteralOperation.ConstantValue.HasValue && aLiteralOperation.ConstantValue.Value.Equals(bLiteralOperation.ConstantValue.Value),
+                IPropertyReferenceOperation aPropertyOperation when b is IPropertyReferenceOperation bPropertyOperation => aPropertyOperation.Property.Equals(bPropertyOperation.Property, SymbolEqualityComparer.Default),
+                IMethodReferenceOperation aMethodOperation when b is IMethodReferenceOperation bMethodOperation => aMethodOperation.Method.Equals(bMethodOperation.Method, SymbolEqualityComparer.Default),
+                _ => false
+            };
+        }
+
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(DoNotGuardRemoveByContainsKeyRule, DoNotGuardIndexerAccessByContainsKeyRule, DoNotGuardAddByContainsKeyRule);
+
         private static LocalizableString CreateResource(string resourceName)
         {
             return new LocalizableResourceString(resourceName, MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));

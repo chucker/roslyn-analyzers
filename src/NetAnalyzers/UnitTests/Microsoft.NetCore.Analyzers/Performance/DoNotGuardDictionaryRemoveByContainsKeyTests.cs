@@ -2,7 +2,6 @@
 
 using System.Globalization;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 
@@ -10,333 +9,273 @@ using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
     Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpDoNotGuardDictionaryOperationsFixer>;
 using VerifyVB = Test.Utilities.VisualBasicCodeFixVerifier<
-    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
+    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
     Microsoft.NetCore.VisualBasic.Analyzers.Performance.BasicDoNotGuardDictionaryOperationsFixer>;
 
 namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 {
     public class DoNotGuardDictionaryRemoveByContainsKeyTests
     {
-        private const string RemoveIsTheOnlyStatement = @"
-            if ({|#0:MyDictionary.ContainsKey(""Key"")|})
-                {|#1:MyDictionary.Remove(""Key"")|};";
-        
-        private const string RemoveIsTheOnlyStatementFixed = @"
-            MyDictionary.Remove(""Key"");";
-        
         #region Tests
+
         [Fact]
         public Task RemoveIsTheOnlyStatement_OffersFixer_CS()
         {
-            var source = CreateCSharpCode(RemoveIsTheOnlyStatement);
-            var fixedSource = CreateCSharpCode(RemoveIsTheOnlyStatementFixed);
+            const string source = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|})
+                {|#1:MyDictionary.Remove(""Key"")|};";
+
+            const string fixedSource = @"
+            MyDictionary.Remove(""Key"");";
 
             return new VerifyCS.Test
             {
-                TestCode = source,
-                FixedCode = fixedSource,
+                TestCode = CreateCSharpCode(source),
+                FixedCode = CreateCSharpCode(fixedSource),
                 ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.NetCore.NetCoreApp31
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
             }.RunAsync();
         }
 
         [Fact]
-        public async Task RemoveWithOutValueIsTheOnlyStatement_OffersFixer_CS()
+        public Task RemoveWithOutValueIsTheOnlyStatement_OffersFixer_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+            const string source = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|})
+                {|#1:MyDictionary.Remove(""Key"", out var value)|};";
 
-        public MyClass()
-        {
-            if ([|MyDictionary.ContainsKey(""Key"")|])
-                MyDictionary.Remove(""Key"", out var value);
-        }
-    }
-}";
+            const string fixedSource = @"
+            MyDictionary.Remove(""Key"", out var value);";
 
-            string fixedSource = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
-            MyDictionary.Remove(""Key"", out var value);
-        }
-    }
-}";
-
-            await new VerifyCS.Test
+            return new VerifyCS.Test
             {
-                TestCode = source,
-                FixedCode = fixedSource,
-                ReferenceAssemblies = ReferenceAssemblies.NetCore.NetCoreApp31
+                TestCode = CreateCSharpCode(source),
+                FixedCode = CreateCSharpCode(fixedSource),
+                ExpectedDiagnostics = { StandardDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
             }.RunAsync();
         }
 
         [Fact]
-        public async Task RemoveIsTheOnlyStatementInABlock_OffersFixer_CS()
+        public Task RemoveIsTheOnlyStatementInABlock_OffersFixer_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+            const string source = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|}) {
+                {|#1:MyDictionary.Remove(""Key"")|};
+            }";
 
-        public MyClass()
-        {
-            if ([|MyDictionary.ContainsKey(""Key"")|])
+            const string fixedSource = @"
+            MyDictionary.Remove(""Key"");";
+
+            return new VerifyCS.Test
             {
-                MyDictionary.Remove(""Key"");
-            }
-        }
-    }
-}";
-
-            string fixedSource = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
-            MyDictionary.Remove(""Key"");
-        }
-    }
-}";
-
-            await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
+                TestCode = CreateCSharpCode(source),
+                FixedCode = CreateCSharpCode(fixedSource),
+                ExpectedDiagnostics = { StandardDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task HasElseBlock_NoDiagnostic_CS()
+        public Task HasElseBlock_NoDiagnostic_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
-            if (MyDictionary.ContainsKey(""Key""))
-            {
-                MyDictionary.Remove(""Key"");
+            const string source = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|}) {
+                {|#1:MyDictionary.Remove(""Key"")|};
             }
             else
             {
                 throw new Exception(""Key doesn't exist"");
-            }
-        }
-    }
-}";
+            }";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
-        }
-
-        [Fact]
-        public async Task NegatedCondition_ReportsDiagnostic_CS()
-        {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
-            if (![|MyDictionary.ContainsKey(""Key"")|])
-                MyDictionary.Remove(""Key"");
-        }
-    }
-}";
-
-            await VerifyCS.VerifyAnalyzerAsync(source);
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                FixedCode = CreateCSharpCode(source),
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task AdditionalCondition_NoDiagnostic_CS()
+        public Task NegatedCondition_ReportsDiagnostic_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+            const string source = @"
+            if (!{|#0:MyDictionary.ContainsKey(""Key"")|})
+                {|#1:MyDictionary.Remove(""Key"")|};";
 
-        public MyClass()
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                ExpectedDiagnostics = { StandardDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
+        }
+
+        [Fact]
+        public Task AdditionalCondition_NoDiagnostic_CS()
         {
+            const string source = @"
             if (MyDictionary.ContainsKey(""Key"") && MyDictionary.Count > 2)
-                MyDictionary.Remove(""Key"");
-        }
-    }
-}";
+                MyDictionary.Remove(""Key"");";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task ConditionInVariable_NoDiagnostic_CS()
+        public Task ConditionInVariable_NoDiagnostic_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
+            const string source = @"
             var result = MyDictionary.ContainsKey(""Key"");
             if (result)
-	            MyDictionary.Remove(""Key"");
-        }
-    }
-}";
+	            MyDictionary.Remove(""Key"");";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task RemoveInSeparateLine_NoDiagnostic_CS()
+        public Task RemoveInSeparateLine_NoDiagnostic_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
-
-        public MyClass()
-        {
+            const string source = @"
             if (MyDictionary.ContainsKey(""Key""))
 	            _ = MyDictionary.Count;
-	        MyDictionary.Remove(""Key"");
-        }
-    }
-}";
+	        MyDictionary.Remove(""Key"");";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task AdditionalStatements_ReportsDiagnostic_CS()
+        public Task AdditionalStatements_ReportsDiagnostic_CS()
         {
-            string source = @"
-" + CSUsings + @"
-namespace Testopolis
-{
-    public class MyClass
-    {
-        private readonly Dictionary<string, string> MyDictionary = new Dictionary<string, string>();
+            const string source = @"
+            if ({|#0:MyDictionary.ContainsKey(""Key"")|})
+            {
+                {|#1:MyDictionary.Remove(""Key"")|};
+                Console.WriteLine();
+            }";
 
-        public MyClass()
+            const string fixedSource = @"
+            if (MyDictionary.Remove(""Key""))
+            {
+                Console.WriteLine();
+            }";
+
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                FixedCode = CreateCSharpCode(fixedSource),
+                ExpectedDiagnostics = { StandardDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
+        }
+
+        [Fact]
+        public Task AdditionalStatementsMultipleConditions_NoDiagnostic_CS()
         {
-            if ([|MyDictionary.ContainsKey(""Key"")|])
+            const string source = @"
+            if (MyDictionary.ContainsKey(""Key"") && MyDictionary.Count > 2)
             {
                 MyDictionary.Remove(""Key"");
                 Console.WriteLine();
-            }
-        }
-    }
-}";
+            }";
 
-            await VerifyCS.VerifyAnalyzerAsync(source);
-        }
-
-        [Fact]
-        public async Task RemoveIsTheOnlyStatement_OffersFixer_VB()
-        {
-            string source = @"
-" + VBUsings + @"
-Namespace Testopolis
-    Public Class SomeClass
-        Public MyDictionary As New Dictionary(Of String, String)()
-
-        Public Sub New()
-            If [|MyDictionary.ContainsKey(""Key"")|] Then
-                MyDictionary.Remove(""Key"")
-            End If
-        End Sub
-    End Class
-End Namespace";
-
-            string fixedSource = @"
-" + VBUsings + @"
-Namespace Testopolis
-    Public Class SomeClass
-        Public MyDictionary As New Dictionary(Of String, String)()
-
-        Public Sub New()
-            MyDictionary.Remove(""Key"")
-        End Sub
-    End Class
-End Namespace";
-
-            await VerifyVB.VerifyCodeFixAsync(source, fixedSource);
+            return new VerifyCS.Test
+            {
+                TestCode = CreateCSharpCode(source),
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task NegatedCondition_ReportsDiagnostic_VB()
+        public Task RemoveIsTheOnlyStatement_OffersFixer_VB()
         {
-            string source = @"
-" + VBUsings + @"
-Namespace Testopolis
-    Public Class SomeClass
-        Public MyDictionary As New Dictionary(Of String, String)()
+            const string source = @"
+            If {|#0:MyDictionary.ContainsKey(""Key"")|} Then
+                {|#1:MyDictionary.Remove(""Key"")|}
+            End If";
 
-        Public Sub New()
-            If Not [|MyDictionary.ContainsKey(""Key"")|] Then MyDictionary.Remove(""Key"")
-        End Sub
-    End Class
-End Namespace";
+            const string fixedSource = @"
+            MyDictionary.Remove(""Key"")";
 
-            await VerifyVB.VerifyAnalyzerAsync(source);
+            return new VerifyVB.Test
+            {
+                TestCode = CreateVbCode(source),
+                FixedCode = CreateVbCode(fixedSource),
+                ExpectedDiagnostics = { StandardVbDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
 
         [Fact]
-        public async Task AdditionalStatements_ReportsDiagnostic_VB()
+        public Task NegatedCondition_ReportsDiagnostic_VB()
         {
-            string source = @"
-" + VBUsings + @"
-Namespace Testopolis
-    Public Class SomeClass
-        Public MyDictionary As New Dictionary(Of String, String)()
+            const string source = @"
+            If Not {|#0:MyDictionary.ContainsKey(""Key"")|} Then {|#1:MyDictionary.Remove(""Key"")|}";
 
-        Public Sub New()
-            If [|MyDictionary.ContainsKey(""Key"")|] Then
-                MyDictionary.Remove(""Key"")
+            return new VerifyVB.Test
+            {
+                TestCode = CreateVbCode(source),
+                ExpectedDiagnostics = { StandardVbDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
+        }
+
+        [Fact]
+        public Task SingleLineIf_OffersFixer_VB()
+        {
+            const string source = @"
+            If {|#0:MyDictionary.ContainsKey(""Key"")|} Then {|#1:MyDictionary.Remove(""Key"")|}";
+
+            const string fixedSource = @"
+            MyDictionary.Remove(""Key"")";
+
+            return new VerifyVB.Test
+            {
+                TestCode = CreateVbCode(source),
+                FixedCode = CreateVbCode(fixedSource),
+                ExpectedDiagnostics = { StandardVbDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
+        }
+
+        [Fact]
+        public Task AdditionalStatements_ReportsDiagnostic_VB()
+        {
+            const string source = @"
+            If {|#0:MyDictionary.ContainsKey(""Key"")|} Then
+                {|#1:MyDictionary.Remove(""Key"")|}
                 Console.WriteLine()
-            End If
-        End Sub
-    End Class
-End Namespace";
+            End If";
 
-            await VerifyVB.VerifyAnalyzerAsync(source);
+            const string fixedSource = @"
+            If MyDictionary.Remove(""Key"") Then
+                Console.WriteLine()
+            End If";
+
+            return new VerifyVB.Test
+            {
+                TestCode = CreateVbCode(source),
+                FixedCode = CreateVbCode(fixedSource),
+                ExpectedDiagnostics = { StandardVbDiagnostic() },
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+            }.RunAsync();
         }
+
         #endregion
 
         #region Helpers
+
         private const string CSharpTemplate = @"
 using System;
 using System.Collections.Generic;
@@ -352,9 +291,28 @@ namespace Test
         }}
     }}
 }}";
+
+        private const string VbTemplate = @"
+Imports System
+Imports System.Collections.Generic
+Namespace Testopolis
+    Public Class SomeClass
+        Public MyDictionary As New Dictionary(Of String, String)()
+
+        Public Sub New()
+            {0}
+        End Sub
+    End Class
+End Namespace";
+
         private static string CreateCSharpCode(string content)
         {
             return string.Format(CultureInfo.InvariantCulture, CSharpTemplate, content);
+        }
+
+        private static string CreateVbCode(string content)
+        {
+            return string.Format(CultureInfo.InvariantCulture, VbTemplate, content);
         }
 
         private static DiagnosticResult StandardDiagnostic()
@@ -362,11 +320,11 @@ namespace Test
             return VerifyCS.Diagnostic(DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardRemoveByContainsKeyRule).WithLocation(0).WithLocation(1);
         }
 
-        private const string CSUsings = @"using System;
-using System.Collections.Generic;";
+        private static DiagnosticResult StandardVbDiagnostic()
+        {
+            return VerifyVB.Diagnostic(DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardRemoveByContainsKeyRule).WithLocation(0).WithLocation(1);
+        }
 
-        private const string VBUsings = @"Imports System
-Imports System.Collections.Generic";
         #endregion
     }
 }

@@ -38,7 +38,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             context.RegisterCodeFix(codeAction, context.Diagnostics);
         }
 
-        protected abstract bool TryChangeDocument(Document document, SyntaxNode containsKeyNode, SyntaxNode dictionaryAccessNode, [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> changedDocument);
+        protected abstract bool TryChangeDocument(Document document, SyntaxNode containsKeyNode, SyntaxNode dictionaryAccessNode, [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> codeActionMethod);
 
         public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
     }

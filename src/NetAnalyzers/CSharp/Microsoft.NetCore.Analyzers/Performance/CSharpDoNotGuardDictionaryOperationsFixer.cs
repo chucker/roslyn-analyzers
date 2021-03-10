@@ -6,12 +6,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.NetCore.Analyzers.Performance;
 
 namespace Microsoft.NetCore.CSharp.Analyzers.Performance
@@ -19,19 +17,25 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
     [ExportCodeFixProvider(LanguageNames.CSharp), Shared]
     public class CSharpDoNotGuardDictionaryOperationsFixer : DoNotGuardDictionaryOperationsFixer
     {
-        protected override bool TryChangeDocument(Document document, SyntaxNode containsKeyNode, SyntaxNode dictionaryAccessNode,
-            [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> codeActionMethod)
+        protected override bool TryChangeDocument(Document document, SyntaxNode containsKeyNode, SyntaxNode dictionaryAccessNode, [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> codeActionMethod)
         {
             codeActionMethod = null!;
-            
-            if(containsKeyNode is not InvocationExpressionSyntax containsKeyInvocation || containsKeyInvocation.Expression is not MemberAccessExpressionSyntax containsKeyAccess)
+
+            if (containsKeyNode is not InvocationExpressionSyntax containsKeyInvocation ||
+                containsKeyInvocation.Expression is not MemberAccessExpressionSyntax containsKeyAccess)
             {
                 return false;
             }
-            
+
+            var ifStatement = containsKeyInvocation.FirstAncestorOrSelf<IfStatementSyntax>();
+            if (ifStatement.Condition is not InvocationExpressionSyntax)
+            {
+                // Do not offer fixer when the ContainsKey check is not the only condition.
+                return false;
+            }
+
             if (dictionaryAccessNode is ElementAccessExpressionSyntax elementAccess)
             {
-                
                 codeActionMethod = ct => FixIndexerAccess(document, containsKeyInvocation, containsKeyAccess, elementAccess, ct);
 
                 return true;
@@ -39,16 +43,9 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 
             if (dictionaryAccessNode is InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax memberAccess } dictionaryAccessInvocation)
             {
-                if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.AddMethodName)
+                if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.AddMethodName || memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName)
                 {
-                    codeActionMethod = ct => FixAddAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
-
-                    return true;
-                }
-                
-                if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName)
-                {
-                    codeActionMethod = ct => FixRemoveAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
+                    codeActionMethod = ct => FixDictionaryAccess(document, containsKeyInvocation, dictionaryAccessInvocation, ct);
 
                     return true;
                 }
@@ -75,32 +72,36 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             return editor.GetChangedDocument();
         }
 
-        private static async Task<Document> FixRemoveAccess(Document document, InvocationExpressionSyntax containsKeyInvocation, MemberAccessExpressionSyntax containsKeyAccess, InvocationExpressionSyntax removeInvocation, MemberAccessExpressionSyntax removeAccess, CancellationToken ct)
+        private static async Task<Document> FixDictionaryAccess(Document document, InvocationExpressionSyntax containsKeyInvocation, InvocationExpressionSyntax operationInvocation, CancellationToken ct)
         {
             var editor = await DocumentEditor.CreateAsync(document, ct).ConfigureAwait(false);
             var ifStatement = containsKeyInvocation.FirstAncestorOrSelf<IfStatementSyntax>();
-            
-            // ContainsKey check is only condition in if statement.
-            if (ifStatement.Condition is InvocationExpressionSyntax && ifStatement.Statement is ExpressionStatementSyntax)
+
+            switch (ifStatement.Statement)
             {
-                //editor.InsertBefore(ifStatement, ifStatement.Statement.NormalizeWhitespace());
-                editor.RemoveNode(ifStatement);
+                // If statement is a block and has a single statement (the operationInvocation)
+                case BlockSyntax block when block.Statements.Count == 1:
+                {
+                    editor.ReplaceNode(ifStatement, block.Statements[0]);
 
-                return editor.GetChangedDocument();
+                    return editor.GetChangedDocument();
+                }
+                // If statement has a single statement (the operationInvocation)
+                case ExpressionStatementSyntax expressionStatementSyntax:
+                {
+                    editor.ReplaceNode(ifStatement, expressionStatementSyntax.WithTriviaFrom(ifStatement));
+
+                    return editor.GetChangedDocument();
+                }
+                // If statement has multiple statements, in which case, the ContainsKey check should be replaced by the operationInvocation.
+                default:
+                {
+                    editor.RemoveNode(operationInvocation);
+                    editor.ReplaceNode(containsKeyInvocation, (_, generator) => generator.InvocationExpression(operationInvocation.Expression, operationInvocation.ArgumentList.Arguments).WithTriviaFrom(operationInvocation));
+
+                    return editor.GetChangedDocument();
+                }
             }
-            
-            editor.ReplaceNode(containsKeyInvocation, removeInvocation);
-            editor.RemoveNode(removeInvocation);
-            
-            return editor.GetChangedDocument();
-        }
-
-        private static async Task<Document> FixAddAccess(Document document, InvocationExpressionSyntax containsKeyInvocation, MemberAccessExpressionSyntax containsKeyAccess, InvocationExpressionSyntax addInvocation, MemberAccessExpressionSyntax addAccess, CancellationToken ct)
-        {
-            var editor = await DocumentEditor.CreateAsync(document, ct).ConfigureAwait(false);
-            var generator = editor.Generator;
-
-            return editor.GetChangedDocument();
         }
     }
 }
