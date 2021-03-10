@@ -15,11 +15,15 @@ namespace Microsoft.NetCore.Analyzers.Performance
     public abstract class DoNotGuardDictionaryOperationsFixer : CodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardRemoveByContainsKeyId, DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardIndexerAccessByContainsKeyId, DoNotGuardDictionaryOperationsAnalyzer.DoNotGuardAddByContainsKeyId);
-        
+
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var diagnostic = context.Diagnostics.FirstOrDefault();
-            var dictionaryAccessLocation = diagnostic?.AdditionalLocations.FirstOrDefault();
+
+            if (diagnostic?.AdditionalLocations.Count == 0)
+                return;
+
+            var dictionaryAccessLocation = diagnostic?.AdditionalLocations[0];
             if (dictionaryAccessLocation is null)
             {
                 return;

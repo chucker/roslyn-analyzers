@@ -18,9 +18,9 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
     public class CSharpDoNotGuardDictionaryOperationsFixer : DoNotGuardDictionaryOperationsFixer
     {
         protected override bool TryChangeDocument(Document document, SyntaxNode containsKeyNode, SyntaxNode dictionaryAccessNode,
-            [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> codeActionMethod)
+            [NotNullWhen(true)] out Func<CancellationToken, Task<Document>> changedDocument)
         {
-            codeActionMethod = null!;
+            changedDocument = null!;
 
             if (containsKeyNode is not InvocationExpressionSyntax containsKeyInvocation || containsKeyInvocation.Expression is not MemberAccessExpressionSyntax containsKeyAccess)
             {
@@ -30,7 +30,7 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             if (dictionaryAccessNode is ElementAccessExpressionSyntax elementAccess)
             {
 
-                codeActionMethod = ct => FixIndexerAccess(document, containsKeyInvocation, containsKeyAccess, elementAccess, ct);
+                changedDocument = ct => FixIndexerAccess(document, containsKeyInvocation, containsKeyAccess, elementAccess, ct);
 
                 return true;
             }
@@ -39,14 +39,14 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             {
                 if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.AddMethodName)
                 {
-                    codeActionMethod = ct => FixAddAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
+                    changedDocument = ct => FixAddAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
 
                     return true;
                 }
 
                 if (memberAccess.Name.Identifier.ValueText == DoNotGuardDictionaryOperationsAnalyzer.RemoveMethodName)
                 {
-                    codeActionMethod = ct => FixRemoveAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
+                    changedDocument = ct => FixRemoveAccess(document, containsKeyInvocation, containsKeyAccess, dictionaryAccessInvocation, memberAccess, ct);
 
                     return true;
                 }
