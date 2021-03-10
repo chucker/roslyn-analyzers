@@ -1,5 +1,6 @@
 ﻿' Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+#If OLDDONOTGUARDANALYZER Then
 Imports System.Composition
 Imports Microsoft.CodeAnalysis
 Imports Microsoft.CodeAnalysis.CodeFixes
@@ -50,3 +51,4 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
         End Function
     End Class
 End Namespace
+#End If

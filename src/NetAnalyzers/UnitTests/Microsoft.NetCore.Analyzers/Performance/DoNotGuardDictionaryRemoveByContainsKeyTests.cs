@@ -9,7 +9,7 @@ using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
     Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpDoNotGuardDictionaryOperationsFixer>;
 using VerifyVB = Test.Utilities.VisualBasicCodeFixVerifier<
-    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryRemoveByContainsKey,
+    Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
     Microsoft.NetCore.VisualBasic.Analyzers.Performance.BasicDoNotGuardDictionaryOperationsFixer>;
 
 namespace Microsoft.NetCore.Analyzers.Performance.UnitTests

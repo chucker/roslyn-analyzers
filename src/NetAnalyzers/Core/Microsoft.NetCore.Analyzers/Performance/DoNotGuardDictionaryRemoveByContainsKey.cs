@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+#if OLDDONOTGUARDANALYZER
 using System.Collections.Immutable;
 using System.Linq;
 using Analyzer.Utilities;
@@ -133,3 +134,4 @@ namespace Microsoft.NetCore.Analyzers.Performance
         }
     }
 }
+#endif
