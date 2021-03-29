@@ -32,8 +32,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateCSharpCode(source),
                 FixedCode = CreateCSharpCode(fixedSource),
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardDiagnostic() }
             }.RunAsync();
         }
 
@@ -51,8 +50,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateCSharpCode(source),
                 FixedCode = CreateCSharpCode(fixedSource),
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardDiagnostic() }
             }.RunAsync();
         }
 
@@ -71,8 +69,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateCSharpCode(source),
                 FixedCode = CreateCSharpCode(fixedSource),
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardDiagnostic() }
             }.RunAsync();
         }
 
@@ -91,8 +88,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             return new VerifyCS.Test
             {
                 TestCode = CreateCSharpCode(source),
-                FixedCode = CreateCSharpCode(source),
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                FixedCode = CreateCSharpCode(source)
             }.RunAsync();
         }
 
@@ -106,8 +102,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             return new VerifyCS.Test
             {
                 TestCode = CreateCSharpCode(source),
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardDiagnostic() }
             }.RunAsync();
         }
 
@@ -120,8 +115,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 
             return new VerifyCS.Test
             {
-                TestCode = CreateCSharpCode(source),
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                TestCode = CreateCSharpCode(source)
             }.RunAsync();
         }
 
@@ -135,8 +129,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 
             return new VerifyCS.Test
             {
-                TestCode = CreateCSharpCode(source),
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                TestCode = CreateCSharpCode(source)
             }.RunAsync();
         }
 
@@ -150,8 +143,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 
             return new VerifyCS.Test
             {
-                TestCode = CreateCSharpCode(source),
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                TestCode = CreateCSharpCode(source)
             }.RunAsync();
         }
 
@@ -175,8 +167,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateCSharpCode(source),
                 FixedCode = CreateCSharpCode(fixedSource),
-                ExpectedDiagnostics = { StandardDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardDiagnostic() }
             }.RunAsync();
         }
 
@@ -192,8 +183,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 
             return new VerifyCS.Test
             {
-                TestCode = CreateCSharpCode(source),
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                TestCode = CreateCSharpCode(source)
             }.RunAsync();
         }
 
@@ -212,8 +202,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateVbCode(source),
                 FixedCode = CreateVbCode(fixedSource),
-                ExpectedDiagnostics = { StandardVbDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardVbDiagnostic() }
             }.RunAsync();
         }
 
@@ -226,8 +215,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             return new VerifyVB.Test
             {
                 TestCode = CreateVbCode(source),
-                ExpectedDiagnostics = { StandardVbDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardVbDiagnostic() }
             }.RunAsync();
         }
 
@@ -244,8 +232,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateVbCode(source),
                 FixedCode = CreateVbCode(fixedSource),
-                ExpectedDiagnostics = { StandardVbDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardVbDiagnostic() }
             }.RunAsync();
         }
 
@@ -267,8 +254,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             {
                 TestCode = CreateVbCode(source),
                 FixedCode = CreateVbCode(fixedSource),
-                ExpectedDiagnostics = { StandardVbDiagnostic() },
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                ExpectedDiagnostics = { StandardVbDiagnostic() }
             }.RunAsync();
         }
 

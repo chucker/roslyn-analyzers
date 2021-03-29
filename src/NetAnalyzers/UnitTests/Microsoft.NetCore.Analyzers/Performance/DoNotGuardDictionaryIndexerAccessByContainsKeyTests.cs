@@ -2,7 +2,6 @@
 
 using System.Globalization;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.DoNotGuardDictionaryOperationsAnalyzer,
@@ -398,7 +397,6 @@ End Namespace";
             {
                 TestCode = testCode,
                 FixedCode = fixedCode,
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50,
                 ExpectedDiagnostics = { diagnostic }
             }.RunAsync();
         }
@@ -414,8 +412,7 @@ End Namespace";
 
             return new VerifyCS.Test
             {
-                TestCode = testCode,
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50
+                TestCode = testCode
             }.RunAsync();
         }
 
@@ -434,7 +431,6 @@ End Namespace";
             {
                 TestCode = testCode,
                 FixedCode = fixedCode,
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50,
                 ExpectedDiagnostics = { diagnostic }
             }.RunAsync();
         }
@@ -449,8 +445,7 @@ End Namespace";
 
             return new VerifyVB.Test
             {
-                TestCode = testCode,
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net50,
+                TestCode = testCode
             }.RunAsync();
         }
 

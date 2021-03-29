@@ -21,7 +21,9 @@ namespace Microsoft.NetCore.Analyzers.Performance
             var diagnostic = context.Diagnostics.FirstOrDefault();
 
             if (diagnostic?.AdditionalLocations.Count == 0)
+            {
                 return;
+            }
 
             var dictionaryAccessLocation = diagnostic?.AdditionalLocations[0];
             if (dictionaryAccessLocation is null)
@@ -30,7 +32,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
 
             Document document = context.Document;
-            SyntaxNode root = await document.GetSyntaxRootAsync().ConfigureAwait(false);
+            SyntaxNode root = await document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
             var containsKeyNode = root.FindNode(context.Span);
             var dictionaryAccessNode = root.FindNode(dictionaryAccessLocation.SourceSpan, getInnermostNodeForTie: true);
             if (containsKeyNode is null || dictionaryAccessNode is null || !TryChangeDocument(document, containsKeyNode, dictionaryAccessNode, out var codeActionMethod))

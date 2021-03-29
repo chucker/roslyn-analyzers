@@ -96,8 +96,9 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
                 // If statement has multiple statements, in which case, the ContainsKey check should be replaced by the operationInvocation.
                 default:
                 {
-                    editor.RemoveNode(operationInvocation);
+                    var root = await document.GetSyntaxRootAsync(ct).ConfigureAwait(false);
                     editor.ReplaceNode(containsKeyInvocation, (_, generator) => generator.InvocationExpression(operationInvocation.Expression, operationInvocation.ArgumentList.Arguments).WithTriviaFrom(operationInvocation));
+                    editor.RemoveNode(root.FindNode(operationInvocation.Span));
 
                     return editor.GetChangedDocument();
                 }
