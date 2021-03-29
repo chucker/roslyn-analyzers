@@ -23,7 +23,7 @@ namespace Test.Utilities
         public static DiagnosticResult Diagnostic(DiagnosticDescriptor descriptor)
             => CSharpCodeFixVerifier<TAnalyzer, TCodeFix, XUnitVerifier>.Diagnostic(descriptor);
 
-        public static async Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
+        public static Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
         {
             var test = new Test
             {
@@ -31,25 +31,30 @@ namespace Test.Utilities
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
-            await test.RunAsync();
+            return test.RunAsync();
         }
 
-        public static async Task VerifyCodeFixAsync(string source, string fixedSource)
-            => await VerifyCodeFixAsync(source, DiagnosticResult.EmptyDiagnosticResults, fixedSource);
+        public static Task VerifyCodeFixAsync(string source, string fixedSource)
+            => VerifyCodeFixAsync(source, DiagnosticResult.EmptyDiagnosticResults, fixedSource);
 
-        public static async Task VerifyCodeFixAsync(string source, DiagnosticResult expected, string fixedSource)
-            => await VerifyCodeFixAsync(source, new[] { expected }, fixedSource);
+        public static Task VerifyCodeFixAsync(string source, DiagnosticResult expected, string fixedSource)
+            => VerifyCodeFixAsync(source, new[] { expected }, fixedSource);
 
-        public static async Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource)
+        public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource)
+            => VerifyCodeFixAsync(source, expected, fixedSource, MarkupOptions.None);
+
+        public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, MarkupOptions markupOptions)
         {
             var test = new Test
             {
                 TestCode = source,
-                FixedCode = fixedSource,
+                FixedCode = fixedSource
             };
 
             test.ExpectedDiagnostics.AddRange(expected);
-            await test.RunAsync();
+            test.MarkupOptions = markupOptions;
+
+            return test.RunAsync();
         }
     }
 }
